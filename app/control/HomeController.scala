@@ -1,0 +1,5 @@
+package control
+
+class HomeController {
+
+}
