@@ -1,11 +1,14 @@
 package control
 
+import javax.inject.Inject
+
+import module.CassandraCluster
 import play.api.libs.json.{Json, Reads, Writes}
 import play.api.mvc.{Action, Controller}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
-class HomeController extends Controller {
+class HomeController @Inject()(cassandraCluster : CassandraCluster) extends Controller {
 
   // user 기본 데이터 생성
   case class User(Id : String, password : String, email : Option[String] = None, age : Option[Int]=None)
@@ -15,6 +18,7 @@ class HomeController extends Controller {
     val pass = pPass
   }
   def index = Action {
+    println(cassandraCluster.connector)
     Ok("test")
   }
 
