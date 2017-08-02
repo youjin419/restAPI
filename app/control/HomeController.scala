@@ -2,17 +2,21 @@ package control
 
 import javax.inject.Inject
 
+import database.YouJindatabase
+import models.User
 import module.CassandraCluster
-import play.api.libs.json.{Json, Reads, Writes}
-import play.api.mvc.{Action, Controller}
 import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.json.{Json, Reads, Writes, _}
+import play.api.mvc.{Action, Controller}
+import services.UserFinalService
 
-class HomeController @Inject()(cassandraCluster : CassandraCluster) extends Controller {
+import scala.concurrent.ExecutionContext.Implicits.global
 
+
+class HomeController @Inject()() extends Controller with YouJindatabase with CassandraCluster.connector.Connector {
   // user 기본 데이터 생성
-  // case class와 class의 차이
-  case class User(Id : String, password : String, email : Option[String] = None, age : Option[Int]=None)
+  // case class와 class의
+  // 상속받아온 service가 있으므로 this 입력 후 해당 메소드 출력 가능
 
   class UserInfo(pId : String, pPass : String) {
     val Id =  pId
@@ -21,55 +25,60 @@ class HomeController @Inject()(cassandraCluster : CassandraCluster) extends Cont
 
   // 실행 action
   def index = Action {
-    println(cassandraCluster.connector)
     Ok("test")
   }
 
-  // create user
-  def createUser = Action(parse.json) { request =>
+  // create user,post
+  def createUser = Action.async(parse.json) { request =>
     val userInfoJson = request.body
-    val userInfo = userInfoJson.as[User]
+    val userInfo: User = userInfoJson.as[User]
 
-    print(userInfo)
     // id값을 보낸다. 이미 create에는 데이터가 전부 들어가 있기 때문에 id로 구분.
     // string -> 데이터타입 형식
-    Ok(Json.obj("Id" -> "admin"))
+    UserFinalService.userInsert(userInfo).map  { i =>
+      Ok(Json.toJson(i))
+    }
+
   }
 
- // read user
-  def readUser(Id : String) = Action {
-    val userMem: User = User("you","aaa")
-    val userMem1 = new  UserInfo("you", "aaa")
-
-    // 데이터 전체 값을 받아 read
-    Ok(Json.toJson(userMem))
-    NoContent
+  // read user,get
+  def readUser(id: String, limit : String) = Action.async {
+    //val result = UserFinalService.userRead(id)
+    UserFinalService.userRead(id).map { m =>
+      // 데이터 전체 값을 받아 read
+      // map으로 받은 후 최종적으로 map으로 변환된다.s
+      Ok(limit)
+    }
   }
 
   // update user
-  def updateUser(Id : String) = Action { request =>
+  def updateUser(id : String) = Action.async(parse.json) { request =>
     val userInfoJson = request.body
+    val userInfo = userInfoJson.as[User]
+    // 수정값 body
+    // 아이디값
 
-    // update query
-    NoContent
+    UserFinalService.userUpdate(userInfo.copy(id=id)).map { test =>
+      Created(Json.toJson(test))
+    }
   }
 
   // delete user
-  def deleteUser(Id : String) = Action {
-
-    // delete : DB에서 아이디 값 받은 후 삭제 처리
-    NoContent
+  def deleteUser(id : String) = Action.async {
+    UserFinalService.userDelete(id).map { d =>
+      NoContent
+    }
   }
 
   implicit def userInfoReads: Reads[User] = (
-    (__ \ "Id").read[String] and
+    (__ \ "id").readNullable[String].map{case Some(id) => id case None => null} and
       (__ \ "password").read[String] and
       (__ \ "email").readNullable[String] and
       (__ \ "age").readNullable[Int]
     ) (User.apply _)
 
   implicit def userInfoWrites: Writes[User] = (
-    (__ \ "Id").write[String] and
+    (__ \ "id").write[String] and
       (__ \ "password").write[String] and
       (__ \ "email").writeNullable[String] and
       (__ \ "age").writeNullable[Int]

@@ -15,3 +15,6 @@ libraryDependencies ++= Seq(
   "com.outworkers"  %% "phantom-dsl" % "2.11.2"
 )
 
+libraryDependencies += "org.scala-lang.modules" %% "scala-async" % "0.9.1"
+
+

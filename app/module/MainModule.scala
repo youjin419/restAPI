@@ -11,6 +11,6 @@ class MainModule extends AbstractModule{
 
   override def configure(): Unit = {
     log.debug("Binding MainModule")
-    bind(classOf[CassandraCluster]).asEagerSingleton()
+    //bind(classOf[CassandraCluster]).asEagerSingleton()
   }
 }
